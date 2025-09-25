@@ -1,6 +1,6 @@
 # Arcade Flow Analysis — Add a Scooter to Your Cart on Target.com
 
-**Generated:** 2025-09-25 18:13:54 UTC
+**Generated:** 2025-09-25 18:22:15 UTC
 
 ## 1) User interactions (LLM)
 
@@ -17,6 +17,10 @@
 ## 2) Human-friendly summary (LLM)
 
 The user was attempting to browse and customize options for a Razor scooter on Target.com, ultimately aiming to add a selected scooter to their cart for easy checkout.
+
+## 3) Generated social image
+
+![social image](social_image.png)
 
 ---
 
