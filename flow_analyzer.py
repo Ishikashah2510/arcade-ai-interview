@@ -170,10 +170,20 @@ def generate_markdown(report_path: Path, flow, actions, summary, image_filename)
 # ---------- Main ----------
 def main():
     flow = load_flow()
-    actions, summary = analyze_with_llm(flow)
+
+    try:
+        actions, summary = analyze_with_llm(flow)
+    except Exception as e:
+        print(f"LLM analysis failed: {e}")
+        actions, summary = [], "[Analysis failed]"
 
     image_path = OUT_DIR / "social_image.png"
-    create_social_image(summary, image_path)
+
+    if summary:
+        try:
+            create_social_image(summary, image_path)
+        except Exception as e:
+            print(f"Image generation failed: {e}")
 
     report_path = OUT_DIR / "report.md"
     generate_markdown(report_path, flow, actions, summary, image_path.name)
