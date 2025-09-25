@@ -5,10 +5,12 @@ generate_arcade_report.py
 Reads flow.json and generates a Markdown report with:
  - User actions extracted by LLM
  - Human-friendly summary
+Uses simple JSON-based caching to avoid repeated LLM calls.
 """
 
 import json
 import os
+import hashlib
 from pathlib import Path
 from datetime import datetime
 from openai import OpenAI
@@ -17,9 +19,11 @@ from dotenv import load_dotenv
 load_dotenv()  # Loads variables from .env into os.environ
 
 OUT_DIR = Path("./arcade_output")
+CACHE_DIR = Path("./.cache")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-client = OpenAI(api_key=os.getenv(("OPENAI_API_KEY")))
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # ---------- Load flow ----------
 def load_flow():
@@ -27,6 +31,20 @@ def load_flow():
         if p.exists():
             return json.loads(p.read_text(encoding="utf-8"))
     raise FileNotFoundError("flow.json not found")
+
+# ---------- Caching helpers ----------
+def _cache_key(data: str) -> str:
+    return hashlib.sha256(data.encode("utf-8")).hexdigest()
+
+def cache_load(key: str):
+    f = CACHE_DIR / f"{key}.json"
+    if f.exists():
+        return json.loads(f.read_text())
+    return None
+
+def cache_save(key: str, obj):
+    f = CACHE_DIR / f"{key}.json"
+    f.write_text(json.dumps(obj, indent=2))
 
 # ---------- LLM actions + summary ----------
 def analyze_with_llm(flow):
@@ -48,6 +66,11 @@ Return your response STRICTLY as JSON in this format:
 }}
     """
 
+    key = _cache_key(prompt + "ANALYSIS")
+    cached = cache_load(key)
+    if cached:
+        return cached.get("actions", []), cached.get("summary", "")
+
     resp = client.responses.create(
         model="gpt-4o-mini",
         input=prompt,
@@ -66,6 +89,7 @@ Return your response STRICTLY as JSON in this format:
         except Exception:
             parsed = {"actions": ["[Error parsing actions]"], "summary": text}
 
+    cache_save(key, parsed)
     return parsed.get("actions", []), parsed.get("summary", "")
 
 # ---------- Markdown ----------
